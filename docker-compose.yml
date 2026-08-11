@@ -1,75 +1,27 @@
-# Docker Compose for Strix Enhanced
-# 支持 Burp 截图、终端截图和 XLSX 合规报告功能
-
-version: '3.8'
-
 services:
   strix:
     build:
       context: .
-      dockerfile: containers/Dockerfile
+      dockerfile: Dockerfile
     image: strix-enhanced:latest
-    container_name: strix-pentest
+    container_name: strix-scanner
     environment:
-      # LLM 配置 (必填)
       - STRIX_LLM=${STRIX_LLM:-openai/gpt-4o}
-      - LLM_API_KEY=${LLM_API_KEY:-}
-      - LLM_API_BASE=${LLM_API_BASE:-}
-      
-      # 可选：Perplexity API Key (用于搜索)
-      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
-      
-      # 浏览器配置
-      - AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
-      - AGENT_BROWSER_USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-      - AGENT_BROWSER_ARGS="--disable-blink-features=AutomationControlled,--no-first-run,--no-default-browser-check,--lang=en-US,--headless=new"
+      - LLM_API_KEY=${LLM_API_KEY}
       - DISPLAY=:99
-      
-      # 截图存储目录
-      - AGENT_BROWSER_SCREENSHOT_DIR=/workspace/screenshots
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
-      # 挂载工作目录
-      - ./workspace:/workspace
-      # 挂载测试用例文件 (可选)
-      - ./test_cases:/test_cases
-      # 挂载输出报告目录
-      - ./reports:/reports
-      # Xvfb 虚拟显示器
-      - /tmp/.X11-unix:/tmp/.X11-unix
-    working_dir: /workspace
+      - ./workspace:/app/workspace
+      - ./test_cases:/app/test_cases
+      - ./reports:/app/reports
+      - ./screenshots:/app/screenshots
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    working_dir: /app/strix
+    # 使用虚拟显示器运行浏览器
+    command: >
+      bash -c "Xvfb :99 -screen 0 1920x1080x24 & 
+               export DISPLAY=:99 && 
+               exec sleep infinity"
+    # 允许容器访问宿主机网络 (用于扫描本地目标)
     network_mode: host
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    security_opt:
-      - seccomp:unconfined
-    shm_size: '2gb'
     restart: unless-stopped
-    
-    # 启动命令示例 (可覆盖)
-    # command: >
-    #   bash -c "
-    #     export DISPLAY=:99 &&
-    #     Xvfb :99 -screen 0 1920x1080x24 &
-    #     sleep 2 &&
-    #     strix --target https://example.com --instruction-file /test_cases/instruction.md
-    #   "
-
-  # 可选：Xvfb 虚拟显示器服务 (如果主机没有图形界面)
-  xvfb:
-    image: linuxserver/webtop:latest
-    container_name: strix-xvfb
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Asia/Shanghai
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-    shm_size: '2gb'
-    network_mode: service:strix
-    profiles:
-      - with-xvfb
-
-networks:
-  default:
-    driver: bridge
