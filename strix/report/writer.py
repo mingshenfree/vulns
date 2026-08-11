@@ -294,4 +294,18 @@ def render_vulnerability_md(report: dict[str, Any]) -> str:  # noqa: PLR0912, PL
         lines.append(str(report["assumptions"]))
         lines.append("")
 
+    if report.get("verification_screenshots"):
+        lines.append("## Verification Screenshots\n")
+        lines.append(
+            "The following screenshots from Burp Suite demonstrate the vulnerability "
+            "during manual verification:\n"
+        )
+        for i, screenshot in enumerate(report["verification_screenshots"], start=1):
+            caption = screenshot.get("caption", f"Screenshot {i}")
+            image_path = screenshot.get("path", "")
+            if image_path:
+                lines.append(f"### {caption}\n")
+                lines.append(f"![{caption}]({image_path})\n")
+        lines.append("")
+
     return "\n".join(lines)

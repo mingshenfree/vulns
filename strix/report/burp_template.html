@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burp Suite - HTTP Request/Response</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .header {
+            background: linear-gradient(to bottom, #4a90d9, #3a7bc8);
+            color: white;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid #2a5a98;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .left-panel {
+            width: 250px;
+            background-color: #ffffff;
+            border-right: 1px solid #cccccc;
+            overflow-y: auto;
+        }
+        
+        .request-tree {
+            list-style: none;
+            padding: 5px;
+        }
+        
+        .request-tree li {
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        
+        .request-tree li:hover {
+            background-color: #e8f4fc;
+        }
+        
+        .request-tree li.active {
+            background-color: #cce8ff;
+            border-left: 3px solid #4a90d9;
+        }
+        
+        .method-get { color: #2e7d32; font-weight: bold; }
+        .method-post { color: #1565c0; font-weight: bold; }
+        .method-put { color: #f57c00; font-weight: bold; }
+        .method-delete { color: #c62828; font-weight: bold; }
+        
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #dddddd;
+        }
+        
+        .tab {
+            padding: 8px 20px;
+            font-size: 12px;
+            cursor: pointer;
+            border-right: 1px solid #dddddd;
+            background-color: #f5f5f5;
+        }
+        
+        .tab.active {
+            background-color: #ffffff;
+            border-bottom: 2px solid #4a90d9;
+            font-weight: 600;
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #e8e8e8;
+        }
+        
+        .content-area {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+        
+        .http-message {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 15px;
+        }
+        
+        .request-line, .status-line {
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        
+        .request-line { color: #1565c0; }
+        .status-line.success { color: #2e7d32; }
+        .status-line.error { color: #c62828; }
+        .status-line.redirect { color: #f57c00; }
+        
+        .headers {
+            margin-bottom: 15px;
+        }
+        
+        .header-name {
+            color: #c62828;
+            font-weight: 600;
+        }
+        
+        .header-value {
+            color: #333333;
+        }
+        
+        .body-section {
+            background-color: #fafafa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #eeeeee;
+        }
+        
+        .body-title {
+            font-weight: 600;
+            color: #666666;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .body-content {
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #333333;
+        }
+        
+        .highlight-injection {
+            background-color: #ffcdd2;
+            border-bottom: 2px solid #c62828;
+            font-weight: bold;
+        }
+        
+        .highlight-xss {
+            background-color: #fff9c4;
+            border-bottom: 2px solid #f57c00;
+            font-weight: bold;
+        }
+        
+        .info-bar {
+            background-color: #e3f2fd;
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #1565c0;
+            border-top: 1px solid #bbdefb;
+        }
+        
+        .vulnerability-badge {
+            display: inline-block;
+            background-color: #c62828;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Burp Suite Professional - Proxy > HTTP History
+            <span class="vulnerability-badge" id="vulnBadge" style="display:none;">{{VULNERABILITY_TYPE}}</span>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <ul class="request-tree">
+                    <li class="active">
+                        <span class="method-{{METHOD_LOWER}}">{{METHOD}}</span> 
+                        {{URL_PATH}}
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="right-panel">
+                <div class="tabs">
+                    <div class="tab active">Request</div>
+                    <div class="tab">Response</div>
+                    <div class="tab">Headers</div>
+                    <div class="tab">Params</div>
+                </div>
+                
+                <div class="content-area">
+                    <div class="http-message">
+                        <div class="request-line">{{METHOD}} {{URL_PATH}} HTTP/1.1</div>
+                        
+                        <div class="headers">
+                            {{HEADERS_HTML}}
+                        </div>
+                        
+                        {{BODY_SECTION_HTML}}
+                    </div>
+                </div>
+                
+                <div class="info-bar">
+                    <strong>Host:</strong> {{HOST}} | 
+                    <strong>IP:</strong> {{IP_ADDRESS}} | 
+                    <strong>Length:</strong> {{CONTENT_LENGTH}} bytes
+                    <span id="vulnInfo" style="display:none;"> | <strong>Vulnerability:</strong> {{VULNERABILITY_TYPE}}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-detect vulnerability type for badge
+        const url = "{{URL_FULL}}";
+        const body = `{{BODY_RAW}}`;
+        
+        let vulnType = "";
+        
+        if (url.includes("'") || url.includes('"') || url.includes('--') || 
+            body.includes("'") || body.includes('"') || body.includes('--')) {
+            vulnType = "SQL Injection";
+        } else if (url.includes('<script>') || url.includes('javascript:') || 
+                   body.includes('<script>') || body.includes('javascript:')) {
+            vulnType = "XSS";
+        } else if (url.includes('../') || url.includes('..\\') || 
+                   body.includes('../') || body.includes('..\\')) {
+            vulnType = "Path Traversal";
+        } else if (url.includes('${') || url.includes('#{') || 
+                   body.includes('${') || body.includes('#{')) {
+            vulnType = "SSTI";
+        }
+        
+        if (vulnType) {
+            document.getElementById('vulnBadge').style.display = 'inline-block';
+            document.getElementById('vulnBadge').textContent = vulnType;
+            document.getElementById('vulnInfo').style.display = 'inline';
+            document.getElementById('vulnInfo').innerHTML = ' | <strong>Vulnerability:</strong> ' + vulnType;
+        }
+    </script>
+</body>
+</html>

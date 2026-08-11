@@ -185,6 +185,9 @@ async def _do_create(  # noqa: PLR0912
     fix_pr_body: str | None = None,
     agent_id: str | None = None,
     agent_name: str | None = None,
+    verification_screenshots: list[dict[str, Any]] | None = None,
+    http_request_for_screenshot: dict[str, Any] | None = None,
+    tool_execution_for_screenshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     fields = {
@@ -285,6 +288,53 @@ async def _do_create(  # noqa: PLR0912
                 "reason": dedupe.get("reason", ""),
             }
 
+        # Auto-generate screenshots if HTTP request or tool execution data is provided
+        final_screenshots = list(verification_screenshots) if verification_screenshots else []
+        
+        if http_request_for_screenshot:
+            try:
+                from strix.tools.screenshot.generator import generate_burp_screenshot
+                
+                burp_result = await generate_burp_screenshot(
+                    method=http_request_for_screenshot.get("method", "GET"),
+                    url=http_request_for_screenshot.get("url", ""),
+                    headers=http_request_for_screenshot.get("headers", {}),
+                    body=http_request_for_screenshot.get("body"),
+                    vulnerability_type=title.split()[0] if title else None,
+                    host=http_request_for_screenshot.get("host", ""),
+                    ip_address=http_request_for_screenshot.get("ip_address", ""),
+                )
+                
+                if burp_result.get("path"):
+                    final_screenshots.append({
+                        "path": burp_result["path"],
+                        "caption": f"Burp Suite - {http_request_for_screenshot.get('method', 'HTTP')} Request",
+                        "type": "burp_suite",
+                    })
+            except Exception as e:
+                logger.warning(f"Failed to generate Burp screenshot: {e}")
+        
+        if tool_execution_for_screenshot:
+            try:
+                from strix.tools.screenshot.generator import generate_terminal_screenshot
+                
+                terminal_result = await generate_terminal_screenshot(
+                    tool_name=tool_execution_for_screenshot.get("tool_name", "Unknown Tool"),
+                    command=tool_execution_for_screenshot.get("command", ""),
+                    output_lines=tool_execution_for_screenshot.get("output_lines", []),
+                    status=tool_execution_for_screenshot.get("status", "Success"),
+                    tool_type=tool_execution_for_screenshot.get("tool_type", "SCANNING"),
+                )
+                
+                if terminal_result.get("path"):
+                    final_screenshots.append({
+                        "path": terminal_result["path"],
+                        "caption": f"Terminal - {tool_execution_for_screenshot.get('tool_name', 'Tool')} Execution",
+                        "type": "terminal",
+                    })
+            except Exception as e:
+                logger.warning(f"Failed to generate terminal screenshot: {e}")
+        
         report_id = report_state.add_vulnerability_report(
             title=title,
             description=description,
@@ -308,6 +358,7 @@ async def _do_create(  # noqa: PLR0912
             fix_pr_body=fix_pr_body,
             agent_id=agent_id if isinstance(agent_id, str) else None,
             agent_name=agent_name if isinstance(agent_name, str) else None,
+            verification_screenshots=final_screenshots if final_screenshots else None,
         )
     except (ImportError, AttributeError) as e:
         logger.exception("create_vulnerability_report persistence failed")
@@ -365,6 +416,9 @@ async def create_vulnerability_report(
     cwe: str | None = None,
     code_locations: list[dict[str, Any]] | None = None,
     fix_pr_body: str | None = None,
+    verification_screenshots: list[dict[str, Any]] | None = None,
+    http_request_for_screenshot: dict[str, Any] | None = None,
+    tool_execution_for_screenshot: dict[str, Any] | None = None,
 ) -> str:
     """File a vulnerability report — one report per fully-verified finding.
 
@@ -637,6 +691,17 @@ async def create_vulnerability_report(
             fix (summary + rationale). Prose/markdown only — the code
             change itself belongs in ``code_locations``. Omit for
             black-box findings.
+        http_request_for_screenshot: Optional. HTTP request data to
+            automatically generate a Burp Suite-style screenshot. Provide
+            an object with: ``method``, ``url``, ``headers``, ``body``,
+            ``host``, ``ip_address``. When provided, a Burp UI screenshot
+            will be auto-generated and attached to the report.
+        tool_execution_for_screenshot: Optional. Tool execution data to
+            automatically generate a Terminal-style screenshot. Provide
+            an object with: ``tool_name``, ``command``, ``output_lines``
+            (list of strings), ``status``, ``tool_type``. When provided,
+            a terminal UI screenshot will be auto-generated and attached
+            to the report.
 
     Example (abbreviated — mirror this structure)::
 
@@ -697,6 +762,9 @@ async def create_vulnerability_report(
         fix_pr_body=fix_pr_body,
         agent_id=agent_id,
         agent_name=agent_name,
+        verification_screenshots=verification_screenshots,
+        http_request_for_screenshot=http_request_for_screenshot,
+        tool_execution_for_screenshot=tool_execution_for_screenshot,
     )
     return json.dumps(result, ensure_ascii=False, default=str)
 

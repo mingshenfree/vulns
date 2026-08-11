@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal - Tool Execution</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background-color: #1e1e1e;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #1e1e1e;
+            padding: 0;
+        }
+        
+        .title-bar {
+            background-color: #323233;
+            color: #cccccc;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #3c3c3c;
+        }
+        
+        .title-bar-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+            background-color: #4a90d9;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .terminal-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+        
+        .command-line {
+            margin-bottom: 5px;
+        }
+        
+        .prompt {
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+        
+        .command {
+            color: #dcdcaa;
+        }
+        
+        .output-section {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            padding-left: 20px;
+            border-left: 3px solid #3c3c3c;
+        }
+        
+        .output-line {
+            margin: 3px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .output-success {
+            color: #6a9955;
+        }
+        
+        .output-error {
+            color: #f48771;
+        }
+        
+        .output-warning {
+            color: #dcdcaa;
+        }
+        
+        .output-info {
+            color: #569cd6;
+        }
+        
+        .output-normal {
+            color: #d4d4d4;
+        }
+        
+        .status-bar {
+            background-color: #007acc;
+            color: white;
+            padding: 4px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .status-left, .status-right {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background-color: #d4d4d4;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .tool-badge {
+            background-color: #4a90d9;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .execution-time {
+            color: #b5cea8;
+        }
+        
+        /* Scrollbar styling */
+        .terminal-content::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .terminal-content::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        
+        .terminal-content::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 5px;
+        }
+        
+        .terminal-content::-webkit-scrollbar-thumb:hover {
+            background: #4f4f4f;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-window">
+        <div class="title-bar">
+            <div class="title-bar-icon">></div>
+            <span>{{TOOL_NAME}}</span>
+            <span class="tool-badge">{{TOOL_TYPE}}</span>
+            <span style="margin-left: auto;">{{HOSTNAME}}</span>
+        </div>
+        
+        <div class="terminal-content" id="terminalContent">
+            <div class="command-line">
+                <span class="prompt">{{PROMPT}}</span>
+                <span class="command">{{COMMAND}}</span>
+                <span class="cursor"></span>
+            </div>
+            
+            <div class="output-section">
+                {{OUTPUT_LINES_HTML}}
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-left">
+                <span>{{STATUS}}</span>
+                <span class="execution-time">⏱ {{EXECUTION_TIME}}</span>
+            </div>
+            <div class="status-right">
+                <span>Ln {{LINE_COUNT}}, Col 1</span>
+                <span>UTF-8</span>
+                <span>{{SHELL_TYPE}}</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-scroll to bottom
+        const terminalContent = document.getElementById('terminalContent');
+        terminalContent.scrollTop = terminalContent.scrollHeight;
+    </script>
+</body>
+</html>
