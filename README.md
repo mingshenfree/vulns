@@ -72,10 +72,12 @@ Strix are autonomous AI penetration testing agents that act just like real hacke
 ## 🚀 Quick Start
 
 **Prerequisites:**
-- Docker (running)
+- Docker & Docker Compose (running)
 - An LLM API key from any [supported provider](https://docs.strix.ai/llm-providers/overview) (OpenAI, Anthropic, Google, etc.)
 
 ### Installation & First Scan
+
+#### Option 1: Quick Install (Recommended)
 
 ```bash
 # Install Strix
@@ -91,6 +93,44 @@ strix --target ./app-directory
 
 > [!NOTE]
 > First run automatically pulls the sandbox Docker image. Results are saved to `strix_runs/<run-name>`
+
+#### Option 2: Docker Compose (Enhanced Version with Compliance Reporting)
+
+This enhanced version includes:
+- **Burp Suite Style Screenshots** - Auto-generate professional vulnerability verification screenshots
+- **Terminal Style Screenshots** - Capture tool execution output in CLI format
+- **XLSX Test Case Matching** - Match findings to compliance test cases from Excel
+- **DOCX Report Generation** - Generate compliance-ready reports in Word format
+
+```bash
+# Clone the repository
+git clone https://github.com/mingshenfree/vulns.git
+cd vulns/strix
+
+# Create required directories
+mkdir -p workspace test_cases reports screenshots
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env and set your LLM_API_KEY
+
+# Build and run with Docker Compose
+docker-compose build
+docker-compose up -d
+
+# Execute a scan inside the container
+docker-compose exec strix strix --target https://example.com
+
+# Generate compliance report (after scan completes)
+docker-compose exec strix python3 -c "
+from strix.tools.reporting.compliance_tools import generate_compliance_report
+import asyncio
+asyncio.run(generate_compliance_report(
+    test_case_xlsx_path='/test_cases/test_cases.xlsx',
+    output_docx_path='/reports/compliance_report.docx'
+))
+"
+```
 
 ---
 
